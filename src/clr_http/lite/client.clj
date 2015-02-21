@@ -1,6 +1,5 @@
 (ns clj-http.lite.client
   "Batteries-included HTTP client."
-  (:use [slingshot.slingshot :only [throw+]])
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [clj-http.lite.core :as core]
@@ -33,7 +32,8 @@
       (if (or (not (clojure.core/get req :throw-exceptions true))
               (unexceptional-status? status))
         resp
-        (throw+ resp "clj-http: status %s" (:status %))))))
+        (throw (Exception. (pr-str resp)))
+        #_(throw+ resp "clj-http: status %s" (:status %))))))
 
 (declare wrap-redirects)
 

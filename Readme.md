@@ -1,17 +1,17 @@
-# `clj-http-lite`
+# `clr-http-lite`
 
-A Clojure HTTP library similar to
+A Clojure HTTP library for ClojureCLR similar to
 [clj-http](http://github.com/dakrone/clj-http), but more lightweight.
 
 ## Installation
-
+<!--
 `clj-http-lite` is available as a Maven artifact
 from [Clojars](http://clojars.org/clj-http-lite):
 
 ```clojure
 [clj-http-lite "0.2.1"]
 ```
-
+-->
 ## Differences from clj-http
 
 - Instead of Apache HTTP client, clj-http-lite uses HttpURLConnection
