@@ -1,17 +1,18 @@
 (defproject clj-http-lite "0.2.2-SNAPSHOT"
-  :description "A Clojure HTTP library similar to clj-http, but more lightweight."
-  :url "https://github.com/hiredman/clj-http-lite/"
-  :repositories {"sona" "http://oss.sonatype.org/content/repositories/snapshots"}
-  :warn-on-reflection false
-  :dependencies [[org.clojure/clojure "1.6.0"]
-                 [slingshot "0.12.1"]]
-  :profiles {:dev {:dependencies [[ring/ring-jetty-adapter "1.3.2"]
-                                  [ring/ring-devel "1.3.2"]]}
-             :1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}
-             :1.5 {:dependencies [[org.clojure/clojure "1.5.0"]]}
-             :1.7 {:dependencies [[org.clojure/clojure "1.7.0-alpha4"]]}}
-  :test-selectors {:default  #(not (:integration %))
-                   :integration :integration
-                   :all (constantly true)}
-  :aliases {"all" ["with-profile" "dev,1.3:dev,1.4:dev,1.5:dev:dev,1.7"]}
-  :checksum-deps true)
+  :description "Http client for ClojureCLR based on clj-http-lite."
+  :url "https://github.com/whamtet/clr-http-lite/"
+  :dependencies [
+                 [org.clojure/clojure "1.6.0"]
+            [ring/ring-jetty-adapter "1.3.2"]
+            [ring/ring-devel "1.3.2"]]
+  :plugins [[lein-clr "0.2.0"]
+            ]
+  :clr {
+;        :main-cmd      [:clj-exe "Clojure.Main.exe"]
+        :compile-cmd   [:clj-exe "Clojure.Compile.exe"]
+        :cmd-templates{
+                       :clj-exe   [
+                                   ["Z:\\Downloads\\clojure-clr\\bin\\4.0\\Release" %1] ;latest build
+                                   ]
+                       }}
+  )

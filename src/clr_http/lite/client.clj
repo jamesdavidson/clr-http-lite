@@ -1,27 +1,31 @@
-(ns clj-http.lite.client
+(ns clr-http.lite.client
   "Batteries-included HTTP client."
   (:require [clojure.string :as str]
-            [clojure.java.io :as io]
-            [clj-http.lite.core :as core]
-            [clj-http.lite.util :as util])
-  (:import (java.io InputStream File)
-           (java.net URL UnknownHostException))
+            [clojure.clr.io :as io]
+            [clr-http.lite.core :as core]
+            [clr-http.lite.util :as util])
+  (:import
+   System.Text.Encoding
+   System.Text.UTF8Encoding
+   )
   (:refer-clojure :exclude (get)))
+
+(def str->encoding
+  (into {}
+        (for [encoding (Encoding/GetEncodings)]
+          [(.Name encoding) (.GetEncoding encoding)])))
 
 (defn update [m k f & args]
   (assoc m k (apply f (m k) args)))
 
-(defn when-pos [v]
-  (when (and v (pos? v)) v))
-
 (defn parse-url [url]
-  (let [url-parsed (io/as-url url)]
-    {:scheme (keyword (.getProtocol url-parsed))
-     :server-name (.getHost url-parsed)
-     :server-port (when-pos (.getPort url-parsed))
-     :uri (.getPath url-parsed)
-     :user-info (.getUserInfo url-parsed)
-     :query-string (.getQuery url-parsed)}))
+  (let [uri (Uri. url)]
+    {:scheme (-> uri .Scheme keyword)
+     :server-name (.Host uri)
+     :server-port (.Port uri)
+     :uri (.LocalPath uri)
+     :user-info (.UserInfo uri)
+     :query-params (.Query uri)}))
 
 (def unexceptional-status?
   #{200 201 202 203 204 205 206 207 300 301 302 303 307})
@@ -86,32 +90,34 @@
                 (.startsWith (str typestring) "text/")
                 (if-let [charset (second (re-find #"charset=(.*)"
                                                   (str typestring)))]
-                  (String. #^"[B" body ^String charset)
-                  (String. #^"[B" body "UTF-8"))
-
+                  (.GetString (str->encoding charset UTF8Encoding) body)
+                  (util/utf8-string body))
                 :else
-                (String. #^"[B" body "UTF-8"))))
+                (util/utf8-string body))))
            ;; No :as matches found
-           (assoc resp :body (String. #^"[B" body "UTF-8")))
+           (update-in resp [:body] util/utf8-string))
          ;; Try the charset given if a string is specified
          (string? as)
-         (assoc resp :body (String. #^"[B" body ^String as))
+         (update-in resp [:body] #(.GetString (str->encoding as UTF8Encoding) %))
          ;; Return a regular UTF-8 string body
          :else
-         (assoc resp :body (String. #^"[B" body "UTF-8")))
+         (update-in resp [:body] util/utf8-string))
         resp))))
 
 (defn wrap-input-coercion [client]
   (fn [{:keys [body body-encoding length] :as req}]
-    (if body
-      (cond
-       (string? body)
-       (client (-> req (assoc :body (.getBytes ^String body)
-                              :character-encoding (or body-encoding
-                                                      "UTF-8"))))
-       :else
-       (client req))
-      (client req))))
+    (let [
+          encoding (str->encoding body-encoding UTF8Encoding)
+          ]
+      (if body
+        (cond
+         (string? body)
+         (client (assoc req
+                   :body (.GetBytes encoding body)
+                   :character-encoding (or body-encoding "UTF-8")))
+         :else
+         (client req))
+        (client req)))))
 
 (defn content-type-value [type]
   (if (keyword? type)
@@ -121,14 +127,14 @@
 (defn wrap-content-type [client]
   (fn [{:keys [content-type] :as req}]
     (if content-type
-      (client (-> req (assoc :content-type
-                        (content-type-value content-type))))
+      (client (update-in req [:content-type] content-type-value))
       (client req))))
 
 (defn wrap-accept [client]
   (fn [{:keys [accept] :as req}]
     (if accept
-      (client (-> req (dissoc :accept)
+      (client (-> req
+                  (dissoc :accept)
                   (assoc-in [:headers "Accept"]
                             (content-type-value accept))))
       (client req))))
@@ -174,7 +180,8 @@
 (defn wrap-basic-auth [client]
   (fn [req]
     (if-let [basic-auth (:basic-auth req)]
-      (client (-> req (dissoc :basic-auth)
+      (client (-> req
+                  (dissoc :basic-auth)
                   (assoc-in [:headers "Authorization"]
                             (basic-auth-value basic-auth))))
       (client req))))
@@ -192,7 +199,8 @@
 (defn wrap-method [client]
   (fn [req]
     (if-let [m (:method req)]
-      (client (-> req (dissoc :method)
+      (client (-> req
+                  (dissoc :method)
                   (assoc :request-method m)))
       (client req))))
 
@@ -201,9 +209,10 @@
     (if (and form-params (= :post request-method))
       (client (-> req
                   (dissoc :form-params)
-                  (assoc :content-type (content-type-value
-                                        :x-www-form-urlencoded)
-                         :body (generate-query-string form-params))))
+                  (assoc :content-type
+                    (content-type-value
+                     :x-www-form-urlencoded)
+                    :body (generate-query-string form-params))))
       (client req))))
 
 (defn wrap-url [client]
@@ -212,7 +221,7 @@
       (client (-> req (dissoc :url) (merge (parse-url url))))
       (client req))))
 
-(defn wrap-unknown-host [client]
+#_(defn wrap-unknown-host [client]
   (fn [{:keys [ignore-unknown-host?] :as req}]
     (try
       (client req)
@@ -223,7 +232,7 @@
 
 (defn wrap-request
   "Returns a battaries-included HTTP request function coresponding to the given
-   core client. See client/client."
+  core client. See client/client."
   [request]
   (-> request
       wrap-query-params
@@ -240,28 +249,29 @@
       wrap-content-type
       wrap-form-params
       wrap-method
-      wrap-unknown-host))
+      ;wrap-unknown-host
+      ))
 
 (def #^{:doc
         "Executes the HTTP request corresponding to the given map and returns
-   the response map for corresponding to the resulting HTTP response.
+        the response map for corresponding to the resulting HTTP response.
 
-   In addition to the standard Ring request keys, the following keys are also
-   recognized:
-   * :url
-   * :method
-   * :query-params
-   * :basic-auth
-   * :content-type
-   * :accept
-   * :accept-encoding
-   * :as
+        In addition to the standard Ring request keys, the following keys are also
+        recognized:
+        * :url
+        * :method
+        * :query-params
+        * :basic-auth
+        * :content-type
+        * :accept
+        * :accept-encoding
+        * :as
 
-  The following additional behaviors over also automatically enabled:
-   * Exceptions are thrown for status codes other than 200-207, 300-303, or 307
-   * Gzip and deflate responses are accepted and decompressed
-   * Input and output bodies are coerced as required and indicated by the :as
-     option."}
+        The following additional behaviors over also automatically enabled:
+        * Exceptions are thrown for status codes other than 200-207, 300-303, or 307
+        * Gzip and deflate responses are accepted and decompressed
+        * Input and output bodies are coerced as required and indicated by the :as
+        option."}
   request
   (wrap-request #'core/request))
 

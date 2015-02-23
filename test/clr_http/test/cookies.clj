@@ -1,5 +1,5 @@
-(ns clj-http.test.cookies
-  (:use [clj-http.lite.util]
+(ns clr-http.test.cookies
+  (:use [clr-http.lite.util]
         [clojure.test]))
 
 ;; (defn refer-private [ns]
@@ -7,7 +7,7 @@
 ;;     (when (:private (meta var))
 ;;       (intern *ns* symbol var))))
 
-;; (refer-private 'clj-http.cookies)
+;; (refer-private 'clr-http.cookies)
 
 ;; (def session (str "ltQGXSNp7cgNeFG6rPE06qzriaI+R8W7zJKFu4UOlX4=-"
 ;;                   "-lWgojFmZlDqSBnYJlUmwhqXL4OgBTkra5WXzi74v+nE="))

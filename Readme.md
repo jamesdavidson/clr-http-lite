@@ -16,7 +16,6 @@ from [Clojars](http://clojars.org/clj-http-lite):
 
 - Instead of Apache HTTP client, clj-http-lite uses HttpURLConnection
 - No automatic JSON decoding for response bodies
-- No cookie support
 - No proxy-ing DELETEs with body
 - No multipart form uploads
 - No persistent connection support

@@ -2,11 +2,11 @@
   "Core HTTP request/response implementation."
   (:require [clojure.clr.io :as io]
             [clr-http.lite.util :as util]
+            [clr-http.lite.cookies :as cookies]
             )
   (:import
    System.Net.WebRequest
-   #_(java.io ByteArrayOutputStream InputStream IOException)
-   #_(java.net URI URL HttpURLConnection)))
+   System.Net.CookieContainer))
 
 (defn safe-conj [a b]
   (if (vector? a)
@@ -42,47 +42,46 @@
   the clj-http uses ByteArrays for the bodies."
   [{:keys [request-method scheme server-name server-port uri query-string
            headers content-type character-encoding body socket-timeout
-           conn-timeout multipart debug insecure? save-request? follow-redirects] :as req}]
+           cookies save-request? follow-redirects] :as req}]
   (let [http-url (str (name scheme) "://" server-name
                       (when server-port (str ":" server-port))
                       uri
                       (when query-string (str "?" query-string)))
         request (WebRequest/Create http-url)
         Headers (.Headers request)
+        ^CookieContainer cookie-container (.CookieContainer request)
         ]
     (when (and content-type character-encoding)
-      (.ContentType request (str content-type
-                                 "; charset="
-                                 character-encoding)))
+      (set! (.ContentType request) (str content-type
+                                        "; charset="
+                                        character-encoding)))
     (when (and content-type (not character-encoding))
-      (.ContentType request content-type))
+      (set! (.ContentType request) content-type))
     (doseq [[h v] headers]
       (.Add Headers h v))
     (when (false? follow-redirects)
-      (.AllowAutoRedirect request false))
-    ;(.Method request (.ToUpper (name request-method)))
-
+      (set! (.AllowAutoRedirect request) false))
+    (set! (.Method request) (.ToUpper (name request-method)))
     (when socket-timeout
-      (.ReadWriteTimeout request socket-timeout))
+      (set! (.ReadWriteTimeout request) socket-timeout))
+    (doseq [cookie (map cookies/map->cookie cookies)]
+        (.Add cookie-container cookie))
     (when body
-      (with-open [out (.GetRequestStream request)]
-        (io/copy body out)))
+        (with-open [out (.GetRequestStream request)]
+          (io/copy body out)))
     (let [
-          response (.GetResponse request)
-          ]
-      (merge {:headers (parse-headers response)
-              :status (.StatusCode response)
-              :body (when-not (= request-method :head)
-                      (coerce-body-entity req response))}
-             (when save-request?
-               {:request (assoc (dissoc req :save-request?)
-                           :http-url http-url)})))))
+            response (.GetResponse request)
+            cookies (-> response .Cookies)
+            ]
+        (merge {:headers (parse-headers response)
+                ;              :encoding (.ContentEncoding response)
+                :status (.StatusCode response)
+                :body (when-not (= request-method :head)
+                        (coerce-body-entity req response))
+                :cookies (seq cookies);not quite complete
+                }
+               (when save-request?
+                 {:request (-> req
+                               (dissoc :save-request?)
+                               (assoc :http-url http-url))})))))
 
-(defn t []
-  (-> {:scheme "http"
-       :server-name "www.google.com"
-       :request-method "GET"
-       }
-      request
-      (update-in [:body] util/utf8-string)
-      pr-str))
