@@ -1,12 +1,14 @@
 (ns clr-http.lite.cookies
-  (:use [clr-http.lite.util :only [url-decode url-encode]]
-        [clojure.string :only [blank? join lower-case split replace]])
+  (:require
+   [clojure.string :as string]
+   [clr-http.lite.util :as util]
+   )
   (:import
    System.Net.Cookie
    System.Net.CookieCollection
    ))
 
-(defn- compact-map
+(defn compact-map
   "Removes all map entries where value is nil."
   [m]
   (reduce #(if (get m %2) (assoc %1 %2 (get m %2)) %1)
@@ -20,45 +22,48 @@
   [(.Name cookie)
    (compact-map
     {:comment (.Comment cookie)
-     :comment-url (.CommentURI cookie)
+     :comment-url (if (.CommentUri cookie) (str (.CommentUri cookie)))
      :discard (.Discard cookie)
      :domain (.Domain cookie)
-     :expires (.Expires cookie)
+     :expires (let [expires (.Expires cookie)]
+                (if-not (= (DateTime. 0) expires) expires))
      :path (.Path cookie)
-     :ports (filter identity (map #(try (Int32/Parse %) (catch Exception e)) (-> cookie .Port (replace "\"" "") (split ","))))
+     :ports (let [ports
+                  (filter identity (map #(try (Int32/Parse %) (catch Exception e))
+                                        (-> cookie .Port (string/replace "\"" "") (string/split #","))))]
+              (if-not (empty? ports) ports))
      :secure (.Secure cookie)
      :value (try
-              (url-decode (.Value cookie))
+              (util/url-decode (.Value cookie))
               (catch Exception _ (.Value cookie)))
      :version (.Version cookie)})])
-
-(defmacro doto-set [new & rest]
-  (let [x (gensym)]
-    `(let [~x ~new]
-       ~@(for [[a b] rest]
-           `(set! (~a ~x) ~b)))))
 
 (defn map->cookie
   [[cookie-name
     {:keys [value comment comment-url discard domain expires path ports secure version]}]]
-  (doto-set
-    (Cookie. (name cookie-name) (-> value name url-encode))
-    (.Comment comment)
-    (.CommentURI comment-url)
-    (.Discard (boolean discard))
-    (.Domain domain)
-    (.Expires expires)
-    (.Path path)
-    (.Ports (->> ports (interpose ",") (apply str) pr-str))
-    (.Secure (boolean secure))
-    (.Version (or version 0))))
+  (let [
+        cookie
+        (util/doto-set
+         (Cookie. (name cookie-name) (-> value name util/url-encode))
+         (.Comment comment)
+         (.Discard (if (nil? discard) true discard))
+         (.Domain domain)
+         (.Path path)
+         (.Secure (boolean secure))
+         (.Version (or version 0))
+         )]
+    (if comment-url (set! (.CommentUri cookie) (Uri. comment-url)))
+    (if ports (set! (.Port cookie) (->> ports (interpose ",") (apply str) pr-str)))
+    (if expires (set! (.Discard cookie) expires))
+    cookie
+    ))
 
 #_(defn decode-cookie
     "Decode the Set-Cookie string into a cookie seq."
     [set-cookie-str]
-    (if-not (blank? set-cookie-str)
+    (if-not (string/blank? set-cookie-str)
       ;; I just want to parse a cookie without providing origin. How?
-      (let [domain (lower-case (str (gensym)))
+      (let [domain (string/lower-case (str (gensym)))
             origin (CookieOrigin. domain 80 "/" false)
             [cookie-name cookie-content] (-> (cookie-spec)
                                              (.parse (BasicHeader.
@@ -103,7 +108,7 @@
 
 #_(defn encode-cookies
     "Encode the cookie map into a string."
-    [cookie-map] (join ";" (map encode-cookie (seq cookie-map))))
+    [cookie-map] (string/join ";" (map encode-cookie (seq cookie-map))))
 
 #_(defn encode-cookie-header
     "Encode the :cookies key of the request into a Cookie header."

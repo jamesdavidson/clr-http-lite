@@ -65,17 +65,18 @@
     (when socket-timeout
       (set! (.ReadWriteTimeout request) socket-timeout))
     (doseq [cookie (map cookies/map->cookie cookies)]
-        (.Add cookie-container cookie))
+      (.Add cookie-container cookie))
     (when body
-        (with-open [out (.GetRequestStream request)]
-          (io/copy body out)))
-    (let [
+      (with-open [out (.GetRequestStream request)]
+        (io/copy body out)))
+    (try
+      (let [
             response (.GetResponse request)
             cookies (-> response .Cookies)
             ]
         (merge {:headers (parse-headers response)
                 ;              :encoding (.ContentEncoding response)
-                :status (.StatusCode response)
+                :status (-> response .StatusCode int)
                 :body (when-not (= request-method :head)
                         (coerce-body-entity req response))
                 :cookies (seq cookies);not quite complete
@@ -83,5 +84,7 @@
                (when save-request?
                  {:request (-> req
                                (dissoc :save-request?)
-                               (assoc :http-url http-url))})))))
-
+                               (assoc :http-url http-url))})))
+      (catch Exception e
+        {:status 500
+         :body (str e)}))))

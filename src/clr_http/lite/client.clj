@@ -25,7 +25,8 @@
      :server-port (.Port uri)
      :uri (.LocalPath uri)
      :user-info (.UserInfo uri)
-     :query-params (.Query uri)}))
+     :query-string (let [q (.Query uri)]
+                     (if-not (empty? q) (.Substring q 1)))}))
 
 (def unexceptional-status?
   #{200 201 202 203 204 205 206 207 300 301 302 303 307})
@@ -90,7 +91,7 @@
                 (.startsWith (str typestring) "text/")
                 (if-let [charset (second (re-find #"charset=(.*)"
                                                   (str typestring)))]
-                  (.GetString (str->encoding charset UTF8Encoding) body)
+                  (.GetString (Activator/CreateInstance (str->encoding charset UTF8Encoding)) body)
                   (util/utf8-string body))
                 :else
                 (util/utf8-string body))))
@@ -98,7 +99,7 @@
            (update-in resp [:body] util/utf8-string))
          ;; Try the charset given if a string is specified
          (string? as)
-         (update-in resp [:body] #(.GetString (str->encoding as UTF8Encoding) %))
+         (update-in resp [:body] #(.GetString (Activator/CreateInstance (str->encoding as UTF8Encoding)) %))
          ;; Return a regular UTF-8 string body
          :else
          (update-in resp [:body] util/utf8-string))
@@ -113,7 +114,7 @@
         (cond
          (string? body)
          (client (assoc req
-                   :body (.GetBytes encoding body)
+                   :body (.GetBytes (Activator/CreateInstance encoding) body)
                    :character-encoding (or body-encoding "UTF-8")))
          :else
          (client req))

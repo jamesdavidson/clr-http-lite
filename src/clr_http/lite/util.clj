@@ -19,7 +19,9 @@
 (defn utf8-string
   "Returns the String corresponding to the UTF-8 decoding of the given bytes."
   [b]
-  (.GetString Encoding/UTF8 b))
+  (if (string? b)
+    b
+    (.GetString Encoding/UTF8 b)))
 
 (defn url-decode
   "Returns the form-url-decoded version of the given string, using either a
@@ -83,3 +85,12 @@
       (with-open [deflate-stream (DeflateStream. mem-stream CompressionMode/Compress)]
         (.Write deflate-stream b 0 (.Length b)))
       (.ToArray mem-stream))))
+
+(defmacro doto-set
+  "Similar to doto however sets Csharp properties instead"
+  [new & rest]
+  (let [x (gensym)]
+    `(let [~x ~new]
+       ~@(for [[a b] rest]
+           `(set! (~a ~x) ~b))
+       ~x)))

@@ -60,24 +60,20 @@
 
 
 (deftest ^{:integration true} returns-arbitrary-headers
-
   (let [resp (request {:request-method :get :uri "/get"})]
-    (is (string? (get-in resp [:headers "date"])))))
+    (is (string? (get-in resp [:headers "Date"])))))
 
 
 (deftest ^{:integration true} returns-status-on-exceptional-responses
-
   (let [resp (request {:request-method :get :uri "/error"})]
     (is (= 500 (:status resp)))))
 
-;ok
-#_(deftest ^{:integration true} returns-status-on-redirect
+(deftest ^{:integration true} returns-status-on-redirect
 
   (let [resp (request {:request-method :get :uri "/redirect" :follow-redirects false})]
     (is (= 302 (:status resp)))))
 
-;ok
-#_(deftest ^{:integration true} auto-follows-on-redirect
+(deftest ^{:integration true} auto-follows-on-redirect
   (let [resp (request {:request-method :get :uri "/redirect"})]
     (is (= 200 (:status resp)))
     (is (= "get" (slurp-body resp)))))
@@ -131,11 +127,10 @@
 ;;     (is (re-find #"name=\"c\"" resp-body))
 ;;     (is (re-find #"name=\"d\"" resp-body))))
 
-;ok
-#_(deftest ^{:integration true} t-save-request-obj
+(deftest ^{:integration true} t-save-request-obj
 
   (let [resp (request {:request-method :post :uri "/post"
-                       :body (.getBytes "foo bar")
+                       :body (util/utf8-bytes "foo bar")
                        :save-request? true})]
     (is (= 200 (:status resp)))
     (is (= {:scheme :http
@@ -173,8 +168,7 @@
 ;;        {"set-cookie" ["one" "two"]
 ;;         "server"     "some-server"}))
 
-;ok
-#_(deftest ^{:integration true} t-streaming-response
+(deftest ^{:integration true} t-streaming-response
 
   (let [stream (:body (request {:request-method :get :uri "/get" :as :stream}))
         body (slurp stream)]

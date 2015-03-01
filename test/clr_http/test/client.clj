@@ -1,9 +1,9 @@
 (ns clr-http.test.client
   (:use [clojure.test]
-        [clr-http.test.core :only [run-server]])
+        )
   (:require [clr-http.lite.client :as client]
             [clr-http.lite.util :as util])
-  (:import (java.net UnknownHostException)
+  #_(:import (java.net UnknownHostException)
            (java.util Arrays)))
 
 (def base-req
@@ -12,18 +12,14 @@
    :server-port 18080})
 
 (deftest ^{:integration true} roundtrip
-  (run-server)
-  (Thread/sleep 1000)
   ;; roundtrip with scheme as a keyword
   (let [resp (client/request (merge base-req {:uri "/get" :method :get}))]
     (is (= 200 (:status resp)))
-    #_(is (= "close" (get-in resp [:headers "connection"])))
     (is (= "get" (:body resp))))
   ;; roundtrip with scheme as a string
-  (let [resp (client/request (merge base-req {:uri "/get" :method :get
+  #_(let [resp (client/request (merge base-req {:uri "/get" :method :get
                                               :scheme "http"}))]
     (is (= 200 (:status resp)))
-    #_(is (= "close" (get-in resp [:headers "connection"])))
     (is (= "get" (:body resp)))))
 
 (defn is-passed [middleware req]
@@ -181,7 +177,7 @@
 (deftest apply-on-query-params
   (is-applied client/wrap-query-params
               {:query-params {"foo" "bar" "dir" "<<"}}
-              {:query-string "foo=bar&dir=%3C%3C"}))
+              {:query-string "foo=bar&dir=%3c%3c"}))
 
 (deftest pass-on-no-query-params
   (is-passed client/wrap-query-params
@@ -225,9 +221,9 @@
     (is (= "/foo" (:uri resp)))))
 
 (deftest provide-default-port
-  (is (= nil  (-> "http://example.com/" client/parse-url :server-port)))
+  (is (= 80  (-> "http://example.com/" client/parse-url :server-port)))
   (is (= 8080 (-> "http://example.com:8080/" client/parse-url :server-port)))
-  (is (= nil  (-> "https://example.com/" client/parse-url :server-port)))
+  (is (= 443  (-> "https://example.com/" client/parse-url :server-port)))
   (is (= 8443 (-> "https://example.com:8443/" client/parse-url :server-port))))
 
 (deftest apply-on-form-params
@@ -255,7 +251,7 @@
       (is (= "untouched" (:body resp)))
       (is (not (contains? resp :content-type))))))
 
-(deftest t-ignore-unknown-host
+#_(deftest t-ignore-unknown-host
   (is (thrown? UnknownHostException (client/get "http://aorecuf892983a.com")))
   (is (nil? (client/get "http://aorecuf892983a.com"
                         {:ignore-unknown-host? true}))))
