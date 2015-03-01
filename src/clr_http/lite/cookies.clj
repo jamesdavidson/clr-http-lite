@@ -39,24 +39,25 @@
      :version (.Version cookie)})])
 
 (defn map->cookie
-  [[cookie-name
-    {:keys [value comment comment-url discard domain expires path ports secure version]}]]
-  (let [
-        cookie
-        (util/doto-set
-         (Cookie. (name cookie-name) (-> value name util/url-encode))
-         (.Comment comment)
-         (.Discard (if (nil? discard) true discard))
-         (.Domain domain)
-         (.Path path)
-         (.Secure (boolean secure))
-         (.Version (or version 0))
-         )]
-    (if comment-url (set! (.CommentUri cookie) (Uri. comment-url)))
-    (if ports (set! (.Port cookie) (->> ports (interpose ",") (apply str) pr-str)))
-    (if expires (set! (.Discard cookie) expires))
-    cookie
-    ))
+  [[cookie-name value]]
+  (if (map? value)
+    (let [
+          {:keys [value comment comment-url discard domain expires path ports secure version]} value
+          cookie
+          (util/doto-set
+           (Cookie. (name cookie-name) (-> value name util/url-encode))
+           (.Comment comment)
+           (.Discard (if (nil? discard) true discard))
+           (.Domain domain)
+           (.Path path)
+           (.Secure (boolean secure))
+           (.Version (or version 0))
+           )]
+      (if comment-url (set! (.CommentUri cookie) (Uri. comment-url)))
+      (if ports (set! (.Port cookie) (->> ports (interpose ",") (apply str) pr-str)))
+      (if expires (set! (.Discard cookie) expires))
+      cookie)
+    (Cookie. (name cookie-name) (-> value name util/url-encode))))
 
 #_(defn decode-cookie
     "Decode the Set-Cookie string into a cookie seq."

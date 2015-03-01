@@ -49,7 +49,8 @@
                       (when query-string (str "?" query-string)))
         request (WebRequest/Create http-url)
         Headers (.Headers request)
-        ^CookieContainer cookie-container (.CookieContainer request)
+        ;^CookieContainer cookie-container (.CookieContainer request)
+        cookie-container (CookieContainer.)
         ]
     (when (and content-type character-encoding)
       (set! (.ContentType request) (str content-type
@@ -65,21 +66,22 @@
     (when socket-timeout
       (set! (.ReadWriteTimeout request) socket-timeout))
     (doseq [cookie (map cookies/map->cookie cookies)]
+      (if (empty? (.Domain cookie))
+        (set! (.Domain cookie) server-name))
       (.Add cookie-container cookie))
+    (set! (.CookieContainer request) cookie-container)
     (when body
       (with-open [out (.GetRequestStream request)]
         (io/copy body out)))
     (try
       (let [
             response (.GetResponse request)
-            cookies (-> response .Cookies)
             ]
         (merge {:headers (parse-headers response)
-                ;              :encoding (.ContentEncoding response)
                 :status (-> response .StatusCode int)
                 :body (when-not (= request-method :head)
                         (coerce-body-entity req response))
-                :cookies (seq cookies);not quite complete
+                :cookies (into {} (map cookies/cookie->map (.Cookies response)))
                 }
                (when save-request?
                  {:request (-> req

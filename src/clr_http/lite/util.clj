@@ -3,13 +3,15 @@
   (:require [clojure.clr.io :as io])
   (:import
    System.Text.Encoding
-   System.Web.HttpUtility
    System.IO.MemoryStream
    System.IO.Stream
    System.IO.Compression.GZipStream
    System.IO.Compression.CompressionMode
    System.IO.Compression.DeflateStream
    ))
+
+(assembly-load-with-partial-name "System.Web")
+(import System.Web.HttpUtility)
 
 (defn utf8-bytes
   "Returns the UTF-8 bytes corresponding to the given string."
