@@ -14,21 +14,22 @@ from [Clojars](http://clojars.org/clj-http-lite):
 -->
 ## Differences from clj-http
 
-- Instead of Apache HTTP client, clj-http-lite uses HttpURLConnection
+- Instead of Apache HTTP client, clj-http-lite uses System.Net.WebRequest
+- Does support cookies
 - No automatic JSON decoding for response bodies
 - No proxy-ing DELETEs with body
 - No multipart form uploads
 - No persistent connection support
 - No support for insecure HTTPS connection (yet)
-- namespace rename clj-http.* -> clj-http.lite.*
+- namespace rename clj-http.* -> clr-http.lite.*
 
 ## Usage
 
 The main HTTP client functionality is provided by the
-`clj-http.lite.client` namespace:
+`clr-http.lite.client` namespace:
 
 ```clojure
-(require '[clj-http.lite.client :as client])
+(require '[clr-http.lite.client :as client])
 ```
 
 The client supports simple `get`, `head`, `put`, `post`, and `delete`
@@ -151,10 +152,7 @@ as a primitive for building higher-level interfaces:
 ### Exceptions
 
 The client will throw exceptions on, well, exceptional status
-codes. clj-http will throw a
-[Slingshot](http://github.com/scgilardi/slingshot) Stone that can be
-caught by a regular `(catch Exception e ...)` or in Slingshot's `try+`
-block:
+codes.
 
 ```clojure
 (client/get "http://site.com/broken")
@@ -168,7 +166,7 @@ block:
                                                           "transfer-encoding" "chunked",
                                                           "connection" "close"},
                                    :body "...body here..."}
-   clj-http.lite.client/wrap-exceptions/fn--227 (client.clj:37)
+   clr-http.lite.client/wrap-exceptions/fn--227 (client.clj:37)
 
 ;; You can also ignore exceptions and handle them yourself:
 (client/get "http://site.com/broken" {:throw-exceptions false})
@@ -178,43 +176,24 @@ block:
 ````
 (spacing added by me to be human readable)
 
-### Proxies
-
-A proxy can be specified by setting the Java properties:
-`<scheme>.proxyHost` and `<scheme>.proxyPort` where `<scheme>` is the client
-scheme used (normally 'http' or 'https').
-
-## Faking clj-http responses
-
-If you need to fake clj-http responses (for things like testing and
-such), check out the
-[clj-http-fake](https://github.com/myfreeweb/clj-http-fake) library.
-
 ## Design
 
-The design of `clj-http` is inspired by the
+The design of `clr-http` is inspired by the
 [Ring](http://github.com/mmcgrana/ring) protocol for Clojure HTTP
 server applications.
 
-The client in `clj-http.lite.core` makes HTTP requests according to a given
+The client in `clr-http.lite.core` makes HTTP requests according to a given
 Ring request map and returns Ring response maps corresponding to the
-resulting HTTP response. The function `clj-http.lite.client/request` uses
+resulting HTTP response. The function `clr-http.lite.client/request` uses
 Ring-style middleware to layer functionality over the core HTTP
-request/response implementation. Methods like `clj-http.lite.client/get`
-are sugar over this `clj-http.lite.client/request` function.
+request/response implementation. Methods like `clr-http.lite.client/get`
+are sugar over this `clr-http.lite.client/request` function.
 
 ## Development
 
 To run the tests:
 
-    $ lein deps
-    $ lein test
-
-    Run all tests (including integration):
-    $ lein test :all
-
-    Run tests against 1.2.1, 1.3, 1.4 and 1.5
-    $ lein all do clean, test :all
+    $ lein clr test
 
 ## License
 
