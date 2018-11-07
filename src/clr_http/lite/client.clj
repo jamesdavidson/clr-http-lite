@@ -15,7 +15,7 @@
         (for [encoding (Encoding/GetEncodings)]
           [(.Name encoding) (.GetEncoding encoding)])))
 
-(defn update [m k f & args]
+(defn update-http [m k f & args]
   (assoc m k (apply f (m k) args)))
 
 (defn parse-url [url]
@@ -63,12 +63,12 @@
   (fn [req]
     (if (get-in req [:headers "Accept-Encoding"])
       (client req)
-      (let [req-c (update req :headers assoc "Accept-Encoding" "gzip, deflate")
+      (let [req-c (update-http req :headers assoc "Accept-Encoding" "gzip, deflate")
             resp-c (client req-c)]
         (case (or (get-in resp-c [:headers "Content-Encoding"])
                   (get-in resp-c [:headers "content-encoding"]))
-          "gzip" (update resp-c :body util/gunzip)
-          "deflate" (update resp-c :body util/inflate)
+          "gzip" (update-http resp-c :body util/gunzip)
+          "deflate" (update-http resp-c :body util/inflate)
           resp-c)))))
 
 (defn wrap-output-coercion [client]
