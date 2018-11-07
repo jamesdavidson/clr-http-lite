@@ -6,7 +6,8 @@
             )
   (:import
    System.Net.WebRequest
-   System.Net.CookieContainer))
+   System.Net.CookieContainer
+   System.Net.CredentialCache))
 
 (defn safe-conj [a b]
   (if (vector? a)
@@ -35,12 +36,14 @@
       ins
       (util/to-byte-array ins))))
 
+(def global-cookie (CookieContainer.))
+
 (defn request
   "Executes the HTTP request corresponding to the given Ring request map and
   returns the Ring response map corresponding to the resulting HTTP response.
   Note that where Ring uses InputStreams for the request and response bodies,
   the clj-http uses ByteArrays for the bodies."
-  [{:keys [request-method scheme server-name server-port uri query-string
+  [{:keys [use-cookie default-auth request-method scheme server-name server-port uri query-string
            headers content-type character-encoding body socket-timeout
            cookies save-request? follow-redirects] :as req}]
   (let [http-url (str (name scheme) "://" server-name
@@ -52,6 +55,11 @@
         ;^CookieContainer cookie-container (.CookieContainer request)
         cookie-container (CookieContainer.)
         ]
+
+    (when (true? default-auth)
+      (do
+        (set! (.UseDefaultCredentials request) true)
+        (set! (.Credentials request) (CredentialCache/DefaultNetworkCredentials))))
     (when (and content-type character-encoding)
       (set! (.ContentType request) (str content-type
                                         "; charset="
@@ -69,7 +77,9 @@
       (if (empty? (.Domain cookie))
         (set! (.Domain cookie) server-name))
       (.Add cookie-container cookie))
-    (set! (.CookieContainer request) cookie-container)
+    (if (true? use-cookie)
+      (set! (.CookieContainer request) global-cookie)
+      (set! (.CookieContainer request) cookie-container))
     (when body
       (with-open [out (.GetRequestStream request)]
         (io/copy body out)))

@@ -2,6 +2,8 @@ build
 target
 lib
 *.dot
+*.iml
+.idea/
 
 # use glob syntax.
 syntax: glob
